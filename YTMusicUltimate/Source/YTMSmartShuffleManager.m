@@ -21,6 +21,7 @@
 - (NSArray *)playbackQueueItems;
 - (void)insertQueueItems:(NSArray *)items atIndex:(unsigned long long)index;
 - (YTQueueAutoplayController *)queueAutoplayController;
+- (id)queueItemsController;
 @end
 
 #define SMART_SHUFFLE_TAG "YTMSmartShuffleTag"
