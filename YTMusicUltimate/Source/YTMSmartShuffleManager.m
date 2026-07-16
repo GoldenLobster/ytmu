@@ -1,4 +1,4 @@
-import "YTMSmartShuffleManager.h"
+#import "YTMSmartShuffleManager.h"
 #import <objc/runtime.h>
 
 // Forward class declarations for static analyzer
