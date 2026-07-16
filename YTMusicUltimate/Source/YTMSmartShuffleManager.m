@@ -80,6 +80,7 @@ static void YTMSetSmartShuffleRecommendation(id queueItem, BOOL isRec) {
     [self.insertedVideoIDs removeAllObjects];
     self.currentPlaylistID = nil;
     self.originalQueueSize = 0;
+    self.lastInsertionDate = nil;
 }
 
 - (void)handleTrackChangeInQueueController:(YTQueueController *)controller {
@@ -90,6 +91,10 @@ static void YTMSetSmartShuffleRecommendation(id queueItem, BOOL isRec) {
     }
     if (self.isPerformingSmartShuffleInsertion) {
         [YTMLogger log:@"[SmartShuffle] isPerformingSmartShuffleInsertion is TRUE. Returning."];
+        return;
+    }
+    if (self.lastInsertionDate && [[NSDate date] timeIntervalSinceDate:self.lastInsertionDate] < 2.0) {
+        [YTMLogger log:@"[SmartShuffle] Insertion cooldown active. Returning."];
         return;
     }
     
@@ -250,6 +255,7 @@ static void YTMSetSmartShuffleRecommendation(id queueItem, BOOL isRec) {
             [self.insertedVideoIDs addObject:insertedID];
         }
         
+        self.lastInsertionDate = [NSDate date];
         self.isPerformingSmartShuffleInsertion = YES;
         dispatch_async(dispatch_get_main_queue(), ^{
             @try {

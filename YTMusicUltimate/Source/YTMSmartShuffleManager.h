@@ -10,6 +10,7 @@
 @property (nonatomic, copy) NSString *currentPlaylistID;
 @property (nonatomic, assign) BOOL isPerformingSmartShuffleInsertion;
 @property (nonatomic, assign) NSUInteger originalQueueSize;
+@property (nonatomic, strong) NSDate *lastInsertionDate;
 
 + (instancetype)sharedManager;
 
