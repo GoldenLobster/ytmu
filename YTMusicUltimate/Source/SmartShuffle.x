@@ -58,6 +58,25 @@
 }
 %end
 
+%hook YTQueueShuffleController
+- (void)setShuffleMode:(unsigned long long)mode forceApply:(BOOL)force nowPlayingIndex:(unsigned long long)index nowPlayingVideoID:(id)videoID completion:(id)completion {
+    [YTMLogger log:@"[SmartShuffle] YTQueueShuffleController setShuffleMode hook hit: mode=%llu, force=%d, isInserting=%d", 
+                  mode, force, [[YTMSmartShuffleManager sharedManager] isPerformingSmartShuffleInsertion]];
+                  
+    if ([[YTMSmartShuffleManager sharedManager] isSmartShuffleActive] && 
+        [[YTMSmartShuffleManager sharedManager] isPerformingSmartShuffleInsertion] && 
+        mode == 0) {
+        [YTMLogger log:@"[SmartShuffle] Blocking shuffle controller setShuffleMode:0 during insertion."];
+        if (completion) {
+            void (^block)(void) = completion;
+            block();
+        }
+        return;
+    }
+    %orig;
+}
+%end
+
 %hook YTQueueController
 
 - (BOOL)isAutoplaySupported {
@@ -120,6 +139,16 @@
 }
 
 - (void)setShuffleMode:(unsigned long long)mode forceApply:(BOOL)force {
+    [YTMLogger log:@"[SmartShuffle] setShuffleMode hook hit: mode=%llu, force=%d, isInserting=%d", 
+                  mode, force, [[YTMSmartShuffleManager sharedManager] isPerformingSmartShuffleInsertion]];
+                  
+    if ([[YTMSmartShuffleManager sharedManager] isSmartShuffleActive] && 
+        [[YTMSmartShuffleManager sharedManager] isPerformingSmartShuffleInsertion] && 
+        mode == 0) {
+        [YTMLogger log:@"[SmartShuffle] Blocking setShuffleMode:0 during insertion."];
+        return;
+    }
+    
     %orig;
     
     if ([[YTMSmartShuffleManager sharedManager] isSmartShuffleActive] && mode != 0) {
