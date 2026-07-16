@@ -22,6 +22,7 @@
 - (void)insertQueueItems:(NSArray *)items atIndex:(unsigned long long)index;
 - (YTQueueAutoplayController *)queueAutoplayController;
 - (id)queueItemsController;
+- (void)fetchAutoplaySectionIfNeeded;
 @end
 
 #define SMART_SHUFFLE_TAG "YTMSmartShuffleTag"
@@ -230,7 +231,10 @@ static void YTMSetSmartShuffleRecommendation(id queueItem, BOOL isRec) {
             [YTMLogger log:@"[SmartShuffle] Recommendation cache exhausted, fetching next items..."];
             [autoplay fetchNextItems];
         } else {
-            [YTMLogger log:@"[SmartShuffle] Autoplay controller missing or fetchNextItems unavailable."];
+            [YTMLogger log:@"[SmartShuffle] Autoplay controller missing or fetchNextItems unavailable. Triggering fetchAutoplaySectionIfNeeded."];
+            if ([controller respondsToSelector:@selector(fetchAutoplaySectionIfNeeded)]) {
+                [controller fetchAutoplaySectionIfNeeded];
+            }
         }
     }
 }
