@@ -11,17 +11,10 @@ static void handleUncaughtException(NSException *exception) {
     NSLog(@"[YTMUltimate] CRASH DETECTED: %@", crashLog);
     
     NSString *filePath = [YTMLogger logFilePath];
-    NSFileHandle *fileHandle = [NSFileHandle fileHandleForWritingAtPath:filePath];
-    if (!fileHandle) {
-        [[NSFileManager defaultManager] createFileAtPath:filePath contents:nil attributes:nil];
-        fileHandle = [NSFileHandle fileHandleForWritingAtPath:filePath];
-    }
-    
-    if (fileHandle) {
-        [fileHandle seekToEndOfFile];
-        [fileHandle writeData:[crashLog dataUsingEncoding:NSUTF8StringEncoding]];
-        [fileHandle closeFile];
-    }
+    NSString *existingContent = [NSString stringWithContentsOfFile:filePath encoding:NSUTF8StringEncoding error:nil];
+    if (!existingContent) existingContent = @"";
+    NSString *newContent = [existingContent stringByAppendingString:crashLog];
+    [newContent writeToFile:filePath atomically:YES encoding:NSUTF8StringEncoding error:nil];
 }
 
 @implementation YTMLogger
@@ -46,16 +39,14 @@ static void handleUncaughtException(NSException *exception) {
     NSString *logLine = [NSString stringWithFormat:@"[%@] %@\n", timestamp, message];
     
     NSString *filePath = [self logFilePath];
-    NSFileHandle *fileHandle = [NSFileHandle fileHandleForWritingAtPath:filePath];
-    if (!fileHandle) {
-        [[NSFileManager defaultManager] createFileAtPath:filePath contents:nil attributes:nil];
-        fileHandle = [NSFileHandle fileHandleForWritingAtPath:filePath];
-    }
+    NSString *existingContent = [NSString stringWithContentsOfFile:filePath encoding:NSUTF8StringEncoding error:nil];
+    if (!existingContent) existingContent = @"";
+    NSString *newContent = [existingContent stringByAppendingString:logLine];
     
-    if (fileHandle) {
-        [fileHandle seekToEndOfFile];
-        [fileHandle writeData:[logLine dataUsingEncoding:NSUTF8StringEncoding]];
-        [fileHandle closeFile];
+    NSError *error = nil;
+    BOOL success = [newContent writeToFile:filePath atomically:YES encoding:NSUTF8StringEncoding error:&error];
+    if (!success) {
+        NSLog(@"[YTMUltimate] Failed to write to log file: %@", error);
     }
 }
 
