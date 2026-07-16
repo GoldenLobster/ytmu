@@ -164,7 +164,7 @@ static void YTMSetSmartShuffleRecommendation(id queueItem, BOOL isRec) {
     [YTMLogger log:@"[SmartShuffle] Spacing scan: normalTrackCount=%lu, recommendationFound=%d", (unsigned long)normalTrackCount, recommendationFound];
     
     // If a recommendation is already scheduled within the interval, do nothing
-    if (recommendationFound && (normalTrackCount < self.recommendationInterval)) {
+    if (recommendationFound && (normalTrackCount <= self.recommendationInterval)) {
         [YTMLogger log:@"[SmartShuffle] Recommendation already scheduled within interval. Returning."];
         return;
     }
