@@ -1,5 +1,5 @@
 #import "YTMUltimateSettingsController.h"
-#import "YTMLogger.h"
+#import "../YTMLogger.h"
 
 @implementation YTMUltimateSettingsController
 
