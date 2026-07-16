@@ -1,0 +1,10 @@
+# Exclude decrypted YouTube Music IPA folder
+youtube-ipa/
+
+# Exclude temporary analysis dumps
+test_objc.txt
+test_objc2.txt
+classes.txt
+
+# OS metadata
+.DS_Store
