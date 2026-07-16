@@ -133,6 +133,12 @@ static void YTMSetSmartShuffleRecommendation(id queueItem, BOOL isRec) {
         [YTMLogger log:@"[SmartShuffle] Set originalQueueSize: %lu", (unsigned long)self.originalQueueSize];
     }
     
+    // Auto-correct queue shrinkage
+    if (self.originalQueueSize > queueItems.count) {
+        [YTMLogger log:@"[SmartShuffle] Queue shrunk. Adjusting originalQueueSize from %lu to %lu", (unsigned long)self.originalQueueSize, (unsigned long)queueItems.count];
+        self.originalQueueSize = queueItems.count;
+    }
+    
     // Fallback if originalQueueSize was not set
     if (self.originalQueueSize == 0) {
         self.originalQueueSize = queueItems.count;
@@ -176,9 +182,11 @@ static void YTMSetSmartShuffleRecommendation(id queueItem, BOOL isRec) {
     }
     [YTMLogger log:@"[SmartShuffle] Target insertion index: %llu", insertIndex];
     
-    // 3. Find Unused Native Recommendation at the end of the queue
+    // 3. Find Unused Recommendation (Strategy A: queue end, Strategy B: autoplay cache)
     id recItemToInsert = nil;
     NSUInteger recIndex = NSNotFound;
+    
+    // Strategy A: Check end of the queue for native recommendations
     for (NSUInteger idx = queueItems.count - 1; idx >= self.originalQueueSize; idx--) {
         if (idx < queueItems.count) {
             id item = queueItems[idx];
@@ -190,8 +198,47 @@ static void YTMSetSmartShuffleRecommendation(id queueItem, BOOL isRec) {
         }
     }
     
+    // Strategy B: If no native recommendations at the end, check autoplay cache
+    if (!recItemToInsert) {
+        [YTMLogger log:@"[SmartShuffle] No native items found at queue end. Checking autoplay cache."];
+        YTQueueAutoplayController *autoplay = nil;
+        if ([controller respondsToSelector:@selector(queueAutoplayController)]) {
+            autoplay = [controller queueAutoplayController];
+        }
+        
+        if (autoplay && [autoplay respondsToSelector:@selector(autoplayItems)]) {
+            NSArray *recItems = [autoplay autoplayItems];
+            [YTMLogger log:@"[SmartShuffle] Autoplay cache count: %lu", (unsigned long)recItems.count];
+            
+            // Build set of existing video IDs in queue to avoid duplicates
+            NSMutableSet *existingIDs = [NSMutableSet set];
+            for (id item in queueItems) {
+                if ([item respondsToSelector:@selector(videoRenderer)]) {
+                    id renderer = [item performSelector:@selector(videoRenderer)];
+                    if ([renderer respondsToSelector:@selector(videoId)]) {
+                        NSString *vId = [renderer performSelector:@selector(videoId)];
+                        if (vId) [existingIDs addObject:vId];
+                    }
+                }
+            }
+            
+            for (id recItem in recItems) {
+                if ([recItem respondsToSelector:@selector(videoRenderer)]) {
+                    id renderer = [recItem performSelector:@selector(videoRenderer)];
+                    if ([renderer respondsToSelector:@selector(videoId)]) {
+                        NSString *vId = [renderer performSelector:@selector(videoId)];
+                        if (vId && ![existingIDs containsObject:vId]) {
+                            recItemToInsert = recItem;
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+    }
+    
     // 4. Relocate recommendation or trigger fetch
-    if (recItemToInsert && recIndex != NSNotFound) {
+    if (recItemToInsert) {
         YTMSetSmartShuffleRecommendation(recItemToInsert, YES);
         
         NSString *insertedID = nil;
@@ -203,31 +250,35 @@ static void YTMSetSmartShuffleRecommendation(id queueItem, BOOL isRec) {
             [self.insertedVideoIDs addObject:insertedID];
         }
         
-        [YTMLogger log:@"[SmartShuffle] Relocating videoID: %@ from index: %lu to index: %llu", insertedID, (unsigned long)recIndex, insertIndex];
-        
         self.isPerformingSmartShuffleInsertion = YES;
         dispatch_async(dispatch_get_main_queue(), ^{
             @try {
-                // To avoid index shifts causing issues, remove first then insert
-                [controller removeQueueItemAtIndex:recIndex];
-                
-                // Adjust insert index if the removed item was before the insert index
-                unsigned long long finalInsertIndex = insertIndex;
-                if (recIndex < insertIndex) {
-                    finalInsertIndex--;
+                if (recIndex != NSNotFound) {
+                    // Strategy A: Relocate native item
+                    [controller removeQueueItemAtIndex:recIndex];
+                    
+                    // Adjust insert index if the removed item was before the insert index
+                    unsigned long long finalInsertIndex = insertIndex;
+                    if (recIndex < insertIndex) {
+                        finalInsertIndex--;
+                    }
+                    
+                    [controller insertQueueItems:@[recItemToInsert] atIndex:finalInsertIndex];
+                    [YTMLogger log:@"[SmartShuffle] Relocated videoID: %@ from end index: %lu to final index: %llu", insertedID, (unsigned long)recIndex, finalInsertIndex];
+                } else {
+                    // Strategy B: Insert from autoplay cache
+                    [controller insertQueueItems:@[recItemToInsert] atIndex:insertIndex];
+                    [YTMLogger log:@"[SmartShuffle] Inserted videoID: %@ from autoplay cache to index: %llu", insertedID, insertIndex];
                 }
-                
-                [controller insertQueueItems:@[recItemToInsert] atIndex:finalInsertIndex];
-                [YTMLogger log:@"[SmartShuffle] Relocation succeeded to final index: %llu", finalInsertIndex];
             } @catch (NSException *exception) {
-                [YTMLogger log:@"[SmartShuffle] Relocation failed: %@", exception];
+                [YTMLogger log:@"[SmartShuffle] Insertion/Relocation failed: %@", exception];
             } @finally {
                 self.isPerformingSmartShuffleInsertion = NO;
             }
         });
     } else {
         // Cache empty, trigger next continuation fetch
-        [YTMLogger log:@"[SmartShuffle] No native recommendations left at the end of the queue. Triggering fetchAutoplaySectionIfNeeded."];
+        [YTMLogger log:@"[SmartShuffle] No recommendations available. Triggering fetchAutoplaySectionIfNeeded."];
         if ([controller respondsToSelector:@selector(fetchAutoplaySectionIfNeeded)]) {
             [controller fetchAutoplaySectionIfNeeded];
         }
