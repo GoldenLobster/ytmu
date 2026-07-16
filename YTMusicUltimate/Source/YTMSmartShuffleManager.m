@@ -20,6 +20,7 @@
 - (unsigned long long)nowPlayingIndex;
 - (NSArray *)playbackQueueItems;
 - (void)insertQueueItems:(NSArray *)items atIndex:(unsigned long long)index;
+- (void)removeQueueItemAtIndex:(unsigned long long)index;
 - (YTQueueAutoplayController *)queueAutoplayController;
 - (id)queueItemsController;
 - (void)fetchAutoplaySectionIfNeeded;
