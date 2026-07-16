@@ -16,8 +16,21 @@
     }
 }
 
+- (void)setQueueAutoplayController:(id)autoplayController {
+    %orig;
+    
+    [YTMLogger log:@"[SmartShuffle] setQueueAutoplayController hook hit: %@", autoplayController];
+    
+    // Check and trigger insertions when the autoplay controller is initialized/updated
+    if ([[YTMSmartShuffleManager sharedManager] isSmartShuffleActive]) {
+        [[YTMSmartShuffleManager sharedManager] handleRecommendationsLoaded:self];
+    }
+}
+
 - (void)autoplayController:(id)autoplayController didInsertRenderersAtIndexes:(id)indexes response:(id)response {
     %orig;
+    
+    [YTMLogger log:@"[SmartShuffle] autoplayController didInsertRenderers hook hit"];
     
     // Check and trigger insertions when new recommendations arrive from the server
     if ([[YTMSmartShuffleManager sharedManager] isSmartShuffleActive]) {
