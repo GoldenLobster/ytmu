@@ -9,6 +9,7 @@
 @property (nonatomic, strong) NSMutableSet<NSString *> *insertedVideoIDs;
 @property (nonatomic, copy) NSString *currentPlaylistID;
 @property (nonatomic, assign) BOOL isPerformingSmartShuffleInsertion;
+@property (nonatomic, assign) NSUInteger originalQueueSize;
 
 + (instancetype)sharedManager;
 

@@ -10,7 +10,21 @@
     
     [YTMLogger log:@"[SmartShuffle] setNowPlayingIndex hook hit with index: %llu", index];
     
-    // Check and trigger dynamic insertions on track change
+    if ([[YTMSmartShuffleManager sharedManager] isSmartShuffleActive]) {
+        [[YTMSmartShuffleManager sharedManager] handleTrackChangeInQueueController:self];
+    }
+}
+
+- (void)insertQueueItems:(id)items atIndex:(unsigned long long)index {
+    %orig;
+    
+    // Avoid recursion if this insertion was triggered by our manager
+    if ([[YTMSmartShuffleManager sharedManager] isPerformingSmartShuffleInsertion]) {
+        return;
+    }
+    
+    [YTMLogger log:@"[SmartShuffle] insertQueueItems hook hit: inserting %lu items at index %llu", (unsigned long)[items count], index];
+    
     if ([[YTMSmartShuffleManager sharedManager] isSmartShuffleActive]) {
         [[YTMSmartShuffleManager sharedManager] handleTrackChangeInQueueController:self];
     }
@@ -21,7 +35,6 @@
     
     [YTMLogger log:@"[SmartShuffle] setQueueAutoplayController hook hit: %@", autoplayController];
     
-    // Check and trigger insertions when the autoplay controller is initialized/updated
     if ([[YTMSmartShuffleManager sharedManager] isSmartShuffleActive]) {
         [[YTMSmartShuffleManager sharedManager] handleRecommendationsLoaded:self];
     }
@@ -32,14 +45,12 @@
     
     [YTMLogger log:@"[SmartShuffle] autoplayController didInsertRenderers hook hit"];
     
-    // Check and trigger insertions when new recommendations arrive from the server
     if ([[YTMSmartShuffleManager sharedManager] isSmartShuffleActive]) {
         [[YTMSmartShuffleManager sharedManager] handleRecommendationsLoaded:self];
     }
 }
 
 - (void)promoteAutoplayItemsAtIndexPaths:(id)paths userTriggered:(BOOL)userTriggered {
-    // Disable default autoplay promotion when Smart Shuffle is active
     if ([[YTMSmartShuffleManager sharedManager] isSmartShuffleActive]) {
         return;
     }
@@ -50,7 +61,6 @@
     %orig;
     
     if ([[YTMSmartShuffleManager sharedManager] isSmartShuffleActive] && mode != 0) {
-        // Trigger recommendations check immediately when shuffle mode is activated
         [[YTMSmartShuffleManager sharedManager] handleTrackChangeInQueueController:self];
     }
 }
