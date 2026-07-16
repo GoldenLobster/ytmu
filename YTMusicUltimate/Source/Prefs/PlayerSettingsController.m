@@ -213,6 +213,7 @@
         @{@"key": @"volBar"},
         @{@"key": @"disableAutoRadio"},
         @{@"key": @"skipWarning"},
+        @{@"key": @"smartShuffleEnabled"}
     ];
 
     NSDictionary *data = settingsData[sender.tag];

@@ -1,5 +1,6 @@
 #import "YTMSmartShuffleManager.h"
 #import <objc/runtime.h>
+#import "YTMLogger.h"
 
 // Forward class declarations for static analyzer
 @interface YTIPlaylistPanelVideoRenderer : NSObject
@@ -72,7 +73,7 @@ static void YTMSetSmartShuffleRecommendation(id queueItem, BOOL isRec) {
 }
 
 - (void)resetState {
-    NSLog(@"[SmartShuffle] Resetting manager tracking state.");
+    [YTMLogger log:@"[SmartShuffle] Resetting manager tracking state."];
     [self.insertedVideoIDs removeAllObjects];
     self.currentPlaylistID = nil;
 }
@@ -178,9 +179,9 @@ static void YTMSetSmartShuffleRecommendation(id queueItem, BOOL isRec) {
         dispatch_async(dispatch_get_main_queue(), ^{
             @try {
                 [controller insertQueueItems:@[recItemToInsert] atIndex:insertIndex];
-                NSLog(@"[SmartShuffle] Inserted recommendation videoID: %@ at index: %llu", insertedID, insertIndex);
+                [YTMLogger log:@"[SmartShuffle] Inserted recommendation videoID: %@ at index: %llu", insertedID, insertIndex];
             } @catch (NSException *exception) {
-                NSLog(@"[SmartShuffle] Queue insertion failed: %@", exception);
+                [YTMLogger log:@"[SmartShuffle] Queue insertion failed: %@", exception];
             } @finally {
                 self.isPerformingSmartShuffleInsertion = NO;
             }
@@ -188,7 +189,7 @@ static void YTMSetSmartShuffleRecommendation(id queueItem, BOOL isRec) {
     } else {
         // Cache empty, trigger next continuation fetch
         if (autoplay && [autoplay respondsToSelector:@selector(fetchNextItems)]) {
-            NSLog(@"[SmartShuffle] Recommendation cache exhausted, fetching next items...");
+            [YTMLogger log:@"[SmartShuffle] Recommendation cache exhausted, fetching next items..."];
             [autoplay fetchNextItems];
         }
     }

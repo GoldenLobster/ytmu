@@ -1,6 +1,7 @@
 #import <Foundation/Foundation.h>
 #import <UIKit/UIKit.h>
 #import "YTMSmartShuffleManager.h"
+#import "YTMLogger.h"
 
 %hook YTQueueController
 
@@ -40,3 +41,8 @@
 }
 
 %end
+
+%ctor {
+    [YTMLogger setupCrashReporter];
+    [YTMLogger log:@"Smart Shuffle initialized successfully."];
+}

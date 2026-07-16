@@ -1,4 +1,5 @@
 #import "YTMUltimateSettingsController.h"
+#import "YTMLogger.h"
 
 @implementation YTMUltimateSettingsController
 
@@ -46,17 +47,23 @@
 }
 
 - (NSInteger)numberOfSectionsInTableView:(UITableView *)tableView {
-    return 4;
+    return 5;
 }
 
 - (NSString *)tableView:(UITableView *)tableView titleForHeaderInSection:(NSInteger)section {
-    return section == 3 ? LOC(@"LINKS") : nil;
+    if (section == 3) {
+        return @"Debugging & Logs";
+    }
+    if (section == 4) {
+        return LOC(@"LINKS");
+    }
+    return nil;
 }
 
 - (NSString *)tableView:(UITableView *)tableView titleForFooterInSection:(NSInteger)section {
     if (section == 0) {
         return LOC(@"RESTART_FOOTER");
-    } if (section == 3) {
+    } if (section == 4) {
         NSDictionary *infoDictionary = [[NSBundle mainBundle] infoDictionary];
         NSString *appVersion = infoDictionary[@"CFBundleShortVersionString"];
         return [NSString stringWithFormat:@"\nYouTubeMusic: v%@\nYTMusicUltimate: v%@", appVersion, @(OS_STRINGIFY(TWEAK_VERSION))];
@@ -66,7 +73,7 @@
 }
 
 - (void)tableView:(UITableView *)tableView willDisplayFooterView:(UIView *)view forSection:(NSInteger)section {
-    if (section == 3) {
+    if (section == 4) {
         UITableViewHeaderFooterView *footer = (UITableViewHeaderFooterView *)view;
         footer.textLabel.textAlignment = NSTextAlignmentCenter;
     }
@@ -81,6 +88,8 @@
         case 2:
             return 1;
         case 3:
+            return 2;
+        case 4:
             return 4;
         default:
             return 0;
@@ -160,6 +169,23 @@
     }
 
     if (indexPath.section == 3) {
+        cell = [[UITableViewCell alloc] initWithStyle:UITableViewCellStyleSubtitle reuseIdentifier:@"debugSection"];
+        if (indexPath.row == 0) {
+            cell.textLabel.text = @"Share Log File";
+            cell.detailTextLabel.text = @"Export YTMUltimate.log for debugging";
+            cell.imageView.image = [UIImage systemImageNamed:@"square.and.arrow.up"];
+            cell.imageView.tintColor = [UIColor systemBlueColor];
+        } else if (indexPath.row == 1) {
+            cell.textLabel.text = @"Clear Log File";
+            cell.detailTextLabel.text = @"Delete log data";
+            cell.imageView.image = [UIImage systemImageNamed:@"trash.slash"];
+            cell.imageView.tintColor = [UIColor systemRedColor];
+        }
+        cell.detailTextLabel.textColor = [UIColor secondaryLabelColor];
+        return cell;
+    }
+
+    if (indexPath.section == 4) {
         cell = [[UITableViewCell alloc] initWithStyle:UITableViewCellStyleSubtitle reuseIdentifier:@"linkSection"];
 
         NSArray *settingsData = @[
@@ -241,6 +267,25 @@
     }
 
     if (indexPath.section == 3) {
+        if (indexPath.row == 0) {
+            NSString *logPath = [YTMLogger logFilePath];
+            if ([[NSFileManager defaultManager] fileExistsAtPath:logPath]) {
+                NSURL *fileURL = [NSURL fileURLWithPath:logPath];
+                UIActivityViewController *activityVC = [[UIActivityViewController alloc] initWithActivityItems:@[fileURL] applicationActivities:nil];
+                activityVC.popoverPresentationController.sourceView = [tableView cellForRowAtIndexPath:indexPath];
+                [self presentViewController:activityVC animated:YES completion:nil];
+            } else {
+                UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"Log File Empty" message:@"No log entries recorded yet." preferredStyle:UIAlertControllerStyleAlert];
+                [alert addAction:[UIAlertAction actionWithTitle:@"OK" style:UIAlertActionStyleDefault handler:nil]];
+                [self presentViewController:alert animated:YES completion:nil];
+            }
+        } else if (indexPath.row == 1) {
+            [YTMLogger clearLog];
+            [[[NSClassFromString(@"YTMToastController") alloc] init] showMessage:@"Log cleared"];
+        }
+    }
+
+    if (indexPath.section == 4) {
         NSArray *urls = @[@"https://twitter.com/ginsudev",
                         @"https://twitter.com/dayanch96",
                         @"https://discord.gg/VN9ZSeMhEW",
