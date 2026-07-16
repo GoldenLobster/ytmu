@@ -3,7 +3,69 @@
 #import "YTMSmartShuffleManager.h"
 #import "YTMLogger.h"
 
+// Force-enable Autoplay configs when Smart Shuffle is active
+%hook YTDefaultQueueConfig
+- (BOOL)autoplayEnabled {
+    if ([[YTMSmartShuffleManager sharedManager] isSmartShuffleActive]) {
+        return YES;
+    }
+    return %orig;
+}
+%end
+
+%hook YTMQueueConfig
+- (BOOL)autoplayEnabled {
+    if ([[YTMSmartShuffleManager sharedManager] isSmartShuffleActive]) {
+        return YES;
+    }
+    return %orig;
+}
+%end
+
+%hook YTMQueueConfigImpl
+- (BOOL)autoplayEnabled {
+    if ([[YTMSmartShuffleManager sharedManager] isSmartShuffleActive]) {
+        return YES;
+    }
+    return %orig;
+}
+%end
+
+%hook YTMSettings
+- (BOOL)autoplayEnabled {
+    if ([[YTMSmartShuffleManager sharedManager] isSmartShuffleActive]) {
+        return YES;
+    }
+    return %orig;
+}
+%end
+
+%hook YTMSettingsImpl
+- (BOOL)autoplayEnabled {
+    if ([[YTMSmartShuffleManager sharedManager] isSmartShuffleActive]) {
+        return YES;
+    }
+    return %orig;
+}
+%end
+
+%hook YTUserDefaults
+- (BOOL)autoplayEnabled {
+    if ([[YTMSmartShuffleManager sharedManager] isSmartShuffleActive]) {
+        return YES;
+    }
+    return %orig;
+}
+%end
+
 %hook YTQueueController
+
+- (BOOL)isAutoplaySupported {
+    if ([[YTMSmartShuffleManager sharedManager] isSmartShuffleActive]) {
+        return YES;
+    }
+    return %orig;
+}
 
 - (void)setNowPlayingIndex:(unsigned long long)index {
     %orig;
