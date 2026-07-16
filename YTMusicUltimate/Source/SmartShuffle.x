@@ -8,6 +8,8 @@
 - (void)setNowPlayingIndex:(unsigned long long)index {
     %orig;
     
+    [YTMLogger log:@"[SmartShuffle] setNowPlayingIndex hook hit with index: %llu", index];
+    
     // Check and trigger dynamic insertions on track change
     if ([[YTMSmartShuffleManager sharedManager] isSmartShuffleActive]) {
         [[YTMSmartShuffleManager sharedManager] handleTrackChangeInQueueController:self];

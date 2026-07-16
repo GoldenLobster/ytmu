@@ -79,11 +79,37 @@ static void YTMSetSmartShuffleRecommendation(id queueItem, BOOL isRec) {
 }
 
 - (void)handleTrackChangeInQueueController:(YTQueueController *)controller {
-    if (![self isSmartShuffleActive]) return;
-    if (self.isPerformingSmartShuffleInsertion) return;
+    [YTMLogger log:@"[SmartShuffle] handleTrackChangeInQueueController entered."];
+    if (![self isSmartShuffleActive]) {
+        [YTMLogger log:@"[SmartShuffle] smartShuffleEnabled is OFF. Returning."];
+        return;
+    }
+    if (self.isPerformingSmartShuffleInsertion) {
+        [YTMLogger log:@"[SmartShuffle] isPerformingSmartShuffleInsertion is TRUE. Returning."];
+        return;
+    }
     
-    NSArray *queueItems = [controller playbackQueueItems];
-    if (queueItems.count == 0) return;
+    NSArray *queueItems = nil;
+    if ([controller respondsToSelector:@selector(playbackQueueItems)]) {
+        queueItems = [controller playbackQueueItems];
+    }
+    
+    [YTMLogger log:@"[SmartShuffle] playbackQueueItems count: %lu", (unsigned long)queueItems.count];
+    if (queueItems.count == 0) {
+        // Fallback to queueItemsController -> queueItems if playbackQueueItems is empty
+        if ([controller respondsToSelector:@selector(queueItemsController)]) {
+            id itemsController = [controller queueItemsController];
+            if ([itemsController respondsToSelector:@selector(queueItems)]) {
+                queueItems = [itemsController performSelector:@selector(queueItems)];
+                [YTMLogger log:@"[SmartShuffle] Fallback queueItems count from itemsController: %lu", (unsigned long)queueItems.count];
+            }
+        }
+    }
+    
+    if (queueItems.count == 0) {
+        [YTMLogger log:@"[SmartShuffle] Queue items are empty. Returning."];
+        return;
+    }
     
     // 1. Detect Queue Identity Change & Reset State
     id firstItem = queueItems[0];
@@ -95,13 +121,18 @@ static void YTMSetSmartShuffleRecommendation(id queueItem, BOOL isRec) {
         }
     }
     
+    [YTMLogger log:@"[SmartShuffle] firstVideoID: %@, currentPlaylistID: %@", firstVideoID, self.currentPlaylistID];
     if (firstVideoID && ![firstVideoID isEqualToString:self.currentPlaylistID]) {
         [self resetState];
         self.currentPlaylistID = firstVideoID;
     }
     
     unsigned long long nowPlayingIndex = [controller nowPlayingIndex];
-    if (nowPlayingIndex >= queueItems.count) return;
+    [YTMLogger log:@"[SmartShuffle] nowPlayingIndex: %llu", nowPlayingIndex];
+    if (nowPlayingIndex >= queueItems.count) {
+        [YTMLogger log:@"[SmartShuffle] nowPlayingIndex is out of bounds or NSNotFound (transitions). Returning."];
+        return;
+    }
     
     // 2. Scan Queue Spacing
     NSUInteger normalTrackCount = 0;
@@ -116,8 +147,11 @@ static void YTMSetSmartShuffleRecommendation(id queueItem, BOOL isRec) {
         }
     }
     
+    [YTMLogger log:@"[SmartShuffle] Spacing scan: normalTrackCount=%lu, recommendationFound=%d", (unsigned long)normalTrackCount, recommendationFound];
+    
     // If a recommendation is already scheduled within the interval, do nothing
     if (recommendationFound && (normalTrackCount < self.recommendationInterval)) {
+        [YTMLogger log:@"[SmartShuffle] Recommendation already scheduled within interval. Returning."];
         return;
     }
     
@@ -127,6 +161,7 @@ static void YTMSetSmartShuffleRecommendation(id queueItem, BOOL isRec) {
     if (insertIndex > queueItems.count) {
         insertIndex = queueItems.count;
     }
+    [YTMLogger log:@"[SmartShuffle] Target insertion index: %llu", insertIndex];
     
     // 3. Find Unused Recommendation
     NSMutableSet *existingIDs = [NSMutableSet set];
@@ -148,6 +183,7 @@ static void YTMSetSmartShuffleRecommendation(id queueItem, BOOL isRec) {
     
     if (autoplay && [autoplay respondsToSelector:@selector(autoplayItems)]) {
         NSArray *recItems = [autoplay autoplayItems];
+        [YTMLogger log:@"[SmartShuffle] Autoplay cache count: %lu", (unsigned long)recItems.count];
         for (id recItem in recItems) {
             if ([recItem respondsToSelector:@selector(videoRenderer)]) {
                 id renderer = [recItem performSelector:@selector(videoRenderer)];
@@ -175,6 +211,7 @@ static void YTMSetSmartShuffleRecommendation(id queueItem, BOOL isRec) {
             [self.insertedVideoIDs addObject:insertedID];
         }
         
+        [YTMLogger log:@"[SmartShuffle] Attempting to insert videoID: %@ at index: %llu", insertedID, insertIndex];
         self.isPerformingSmartShuffleInsertion = YES;
         dispatch_async(dispatch_get_main_queue(), ^{
             @try {
@@ -191,12 +228,14 @@ static void YTMSetSmartShuffleRecommendation(id queueItem, BOOL isRec) {
         if (autoplay && [autoplay respondsToSelector:@selector(fetchNextItems)]) {
             [YTMLogger log:@"[SmartShuffle] Recommendation cache exhausted, fetching next items..."];
             [autoplay fetchNextItems];
+        } else {
+            [YTMLogger log:@"[SmartShuffle] Autoplay controller missing or fetchNextItems unavailable."];
         }
     }
 }
 
 - (void)handleRecommendationsLoaded:(YTQueueController *)controller {
-    // When autoplay controller yields new items, re-check track changes to insert if needed
+    [YTMLogger log:@"[SmartShuffle] handleRecommendationsLoaded callback received."];
     [self handleTrackChangeInQueueController:controller];
 }
 
